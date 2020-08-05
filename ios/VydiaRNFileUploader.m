@@ -186,6 +186,19 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             }
         }];
 
+        if ([method isEqualToString:@"GET"]) {
+            if (parameters.count > 0) {
+                reject(@"RN Uploader", @"Parameters supported only in multipart type with method GET", nil);
+                return;
+            }
+            NSURLSessionDataTask *dataTask;
+            dataTask = [[self urlSession: appGroup] dataTaskWithRequest:request];
+            dataTask.taskDescription = customUploadId ? customUploadId : [NSString stringWithFormat:@"%i", thisUploadId];
+            NSLog(@"RNBU will start download %i", thisUploadId);
+            [dataTask resume];
+            resolve(dataTask.taskDescription);
+            return;
+        }
 
         // asset library files have to be copied over to a temp file.  they can't be uploaded directly
         if ([fileURI hasPrefix:@"assets-library"]) {
