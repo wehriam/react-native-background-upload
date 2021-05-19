@@ -119,6 +119,7 @@ declare module "react-native-background-upload" {
         static getFileInfo(path: string): Promise<FileInfo>
         static cancelUpload(uploadId: uploadId): Promise<boolean>
         static canSuspendIfBackground(): void
+		static activeTaskIDs(): Promise<string[]>
     }
 
 }

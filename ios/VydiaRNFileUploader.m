@@ -69,6 +69,15 @@ void (^backgroundSessionCompletionHandler)(void) = nil;
     }
 }
 
+RCT_EXPORT_METHOD(activeTaskIDs:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)
+{
+    [_urlSession getAllTasksWithCompletionHandler:^(NSArray< NSURLSessionTask *> * tasks) {
+        NSArray* taskIDs = [tasks valueForKey: @"taskIdentifier"];
+        RCTLogInfo(@"activeTaskIDs: %@", [tasks valueForKey: @"taskIdentifier"]);
+        resolve(taskIDs);
+    }];
+}
+
 /*
  Gets file information for the path specified.  Example valid path is: file:///var/mobile/Containers/Data/Application/3C8A0EFB-A316-45C0-A30A-761BF8CCF2F8/tmp/trim.A5F76017-14E9-4890-907E-36A045AF9436.MOV
  Returns an object such as: {mimeType: "video/quicktime", size: 2569900, exists: true, name: "trim.AF9A9225-FC37-416B-A25B-4EDB8275A625.MOV", extension: "MOV"}
