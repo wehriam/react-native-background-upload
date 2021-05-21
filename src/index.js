@@ -142,4 +142,5 @@ export default {
   addListener,
   getFileInfo,
   canSuspendIfBackground,
+  activeTaskIDs,
 };
