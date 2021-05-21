@@ -60,6 +60,10 @@ void (^backgroundSessionCompletionHandler)(void) = nil;
     dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
         RCTLogInfo(@"RNBU startObserving: recreate urlSession if necessary");
         [self urlSession:appGroup];
+        
+        [_urlSession getAllTasksWithCompletionHandler:^(NSArray< NSURLSessionTask *> * tasks) {
+            RCTLogInfo(@"RNBU active task on start observing: %@", [tasks valueForKey: @"taskIdentifier"]);
+        }];
     });
 }
 
@@ -226,7 +230,7 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             NSString *uuidStr = [[NSUUID UUID] UUIDString];
             [request setValue:[NSString stringWithFormat:@"multipart/form-data; boundary=%@", uuidStr] forHTTPHeaderField:@"Content-Type"];
 
-            NSData *httpBody = [self createBodyWithBoundary:uuidStr path:fileURI parameters: parameters fieldName:fieldName];
+            NSData *httpBody = [self createBodyWithBoundary:uuidStr     path:fileURI parameters: parameters fieldName:fieldName];
             [request setHTTPBody: httpBody];
 
             uploadTask = [[self urlSession: appGroup] uploadTaskWithStreamedRequest:request];
