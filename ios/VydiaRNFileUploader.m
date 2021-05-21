@@ -62,7 +62,7 @@ void (^backgroundSessionCompletionHandler)(void) = nil;
         [self urlSession:appGroup];
         
         [_urlSession getAllTasksWithCompletionHandler:^(NSArray< NSURLSessionTask *> * tasks) {
-            RCTLogInfo(@"RNBU active task on start observing: %@", [tasks valueForKey: @"taskIdentifier"]);
+            RCTLogInfo(@"RNBU active task on start observing: %@", [tasks valueForKey: @"taskDescription"]);
         }];
     });
 }
@@ -77,8 +77,8 @@ void (^backgroundSessionCompletionHandler)(void) = nil;
 RCT_EXPORT_METHOD(activeTaskIDs:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)
 {
     [_urlSession getAllTasksWithCompletionHandler:^(NSArray< NSURLSessionTask *> * tasks) {
-        NSArray* taskIDs = [tasks valueForKey: @"taskIdentifier"];
-        RCTLogInfo(@"activeTaskIDs: %@", [tasks valueForKey: @"taskIdentifier"]);
+        NSArray* taskIDs = [tasks valueForKey: @"taskDescription"];
+        RCTLogInfo(@"activeTaskIDs: %@", taskIDs);
         resolve(taskIDs);
     }];
 }
