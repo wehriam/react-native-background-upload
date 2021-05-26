@@ -2,6 +2,7 @@
 #import <MobileCoreServices/MobileCoreServices.h>
 #import <React/RCTEventEmitter.h>
 #import <React/RCTBridgeModule.h>
+#import <React/RCTLog.h>
 #import <Photos/Photos.h>
 
 #import "VydiaRNFileUploader.h"
@@ -57,16 +58,29 @@ void (^backgroundSessionCompletionHandler)(void) = nil;
     double delayInSeconds = 0.5;
     dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
     dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        NSLog(@"RNBU startObserving: recreate urlSession if necessary");
+        RCTLogInfo(@"RNBU startObserving: recreate urlSession if necessary");
         [self urlSession:appGroup];
+        
+        [_urlSession getAllTasksWithCompletionHandler:^(NSArray< NSURLSessionTask *> * tasks) {
+            RCTLogInfo(@"RNBU active task on start observing: %@", [tasks valueForKey: @"taskDescription"]);
+        }];
     });
 }
 
 + (void)setCompletionHandlerWithIdentifier: (NSString *)identifier completionHandler: (void (^)())completionHandler {
     if ([BACKGROUND_SESSION_ID isEqualToString:identifier]) {
         backgroundSessionCompletionHandler = completionHandler;
-        NSLog(@"RNBU did setBackgroundSessionCompletionHandler");
+        RCTLogInfo(@"RNBU did setBackgroundSessionCompletionHandler");
     }
+}
+
+RCT_EXPORT_METHOD(activeTaskIDs:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)
+{
+    [_urlSession getAllTasksWithCompletionHandler:^(NSArray< NSURLSessionTask *> * tasks) {
+        NSArray* taskIDs = [tasks valueForKey: @"taskDescription"];
+        RCTLogInfo(@"activeTaskIDs: %@", taskIDs);
+        resolve(taskIDs);
+    }];
 }
 
 /*
@@ -216,7 +230,7 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             NSString *uuidStr = [[NSUUID UUID] UUIDString];
             [request setValue:[NSString stringWithFormat:@"multipart/form-data; boundary=%@", uuidStr] forHTTPHeaderField:@"Content-Type"];
 
-            NSData *httpBody = [self createBodyWithBoundary:uuidStr path:fileURI parameters: parameters fieldName:fieldName];
+            NSData *httpBody = [self createBodyWithBoundary:uuidStr     path:fileURI parameters: parameters fieldName:fieldName];
             [request setHTTPBody: httpBody];
 
             uploadTask = [[self urlSession: appGroup] uploadTaskWithStreamedRequest:request];
@@ -230,7 +244,7 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
         }
 
         uploadTask.taskDescription = customUploadId ? customUploadId : [NSString stringWithFormat:@"%i", thisUploadId];
-        NSLog(@"RNBU will start upload %i", thisUploadId);
+        RCTLogInfo(@"RNBU will start upload %i", thisUploadId);
         [uploadTask resume];
         resolve(uploadTask.taskDescription);
     }
@@ -257,10 +271,10 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
 }
 
 RCT_EXPORT_METHOD(canSuspendIfBackground) {
-    NSLog(@"RNBU canSuspendIfBackground");    
+    RCTLogInfo(@"RNBU canSuspendIfBackground");
     if (backgroundSessionCompletionHandler) {
         backgroundSessionCompletionHandler();
-        NSLog(@"RNBU did call backgroundSessionCompletionHandler (canSuspendIfBackground)");
+        RCTLogInfo(@"RNBU did call backgroundSessionCompletionHandler (canSuspendIfBackground)");
         backgroundSessionCompletionHandler = nil;
     }
 }
@@ -333,15 +347,15 @@ didCompleteWithError:(NSError *)error {
 
     if (error == nil) {
         [self _sendEventWithName:@"RNFileUploader-completed" body:data];
-        NSLog(@"RNBU did complete upload %@", task.taskDescription);
+        RCTLogInfo(@"RNBU did complete upload %@", task.taskDescription);
     } else {
         [data setObject:error.localizedDescription forKey:@"error"];
         if (error.code == NSURLErrorCancelled) {
             [self _sendEventWithName:@"RNFileUploader-cancelled" body:data];
-            NSLog(@"RNBU did cancel upload %@", task.taskDescription);
+            RCTLogError(@"RNBU did cancel upload %@", task.taskDescription);
         } else {
             [self _sendEventWithName:@"RNFileUploader-error" body:data];
-            NSLog(@"RNBU did error upload %@", task.taskDescription);
+            RCTLogError(@"RNBU did error upload %@", task.taskDescription);
         }
     }
 }
@@ -355,6 +369,7 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend {
     if (totalBytesExpectedToSend > 0) { // see documentation.  For unknown size it's -1 (NSURLSessionTransferSizeUnknown)
         progress = 100.0 * (float)totalBytesSent / (float)totalBytesExpectedToSend;
     }
+    RCTLogInfo(@"RNBU progress event for task: %@, progress: %@", task.taskDescription, @(progress));
     [self _sendEventWithName:@"RNFileUploader-progress" body:@{ @"id": task.taskDescription, @"progress": [NSNumber numberWithFloat:progress] }];
 }
 
@@ -372,19 +387,19 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend {
 
 - (void)URLSessionDidFinishEventsForBackgroundURLSession:(NSURLSession *)session {
     if (backgroundSessionCompletionHandler) {
-        NSLog(@"RNBU Did Finish Events For Background URLSession (has backgroundSessionCompletionHandler)");
+        RCTLogInfo(@"RNBU Did Finish Events For Background URLSession (has backgroundSessionCompletionHandler)");
         // This long delay is set as a security if the JS side does not call :canSuspendIfBackground: promptly
         double delayInSeconds = 45.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
         dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
             if (backgroundSessionCompletionHandler) {
                 backgroundSessionCompletionHandler();
-                NSLog(@"RNBU did call backgroundSessionCompletionHandler (timeout)");
+                RCTLogInfo(@"RNBU did call backgroundSessionCompletionHandler (timeout)");
                 backgroundSessionCompletionHandler = nil;
             }
         });
     } else {
-        NSLog(@"RNBU Did Finish Events For Background URLSession (no backgroundSessionCompletionHandler)");
+        RCTLogInfo(@"RNBU Did Finish Events For Background URLSession (no backgroundSessionCompletionHandler)");
     }
 }
 

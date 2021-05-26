@@ -37,6 +37,17 @@ if (NativeModules.VydiaRNFileUploader) {
   NativeModule.addListener(eventPrefix + 'completed');
 }
 
+/**
+ *
+ * get the list of active task that are running. This can be useful to discard any upload the system does not
+ * know about anymore
+ * @returns list of task IDs
+ *
+ */
+export const activeTaskIDs = (): Promise<string[]> => {
+  return NativeModule.activeTaskIDs();
+};
+
 /*
 Gets file information for the path specified.
 Example valid path is:
@@ -131,4 +142,5 @@ export default {
   addListener,
   getFileInfo,
   canSuspendIfBackground,
+  activeTaskIDs,
 };
